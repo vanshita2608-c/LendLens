@@ -40,7 +40,7 @@ This document tracks all development milestones, implementations, tests executed
 ### Phase D: Strategy Lab Calculation Engine & Simulation (Core Differentiator)
 - [x] **Commit 20**: `feat(strategy-lab): implement financial contribution and Expected Credit Loss (ECL) calculation engine`
 - [x] **Commit 21**: `feat(strategy-lab): implement funnel-improvement and processing-time simulation models`
-- [ ] **Commit 22**: `feat(strategy-lab): implement lending eligibility risk-sensitivity simulation`
+- [x] **Commit 22**: `feat(strategy-lab): implement lending eligibility risk-sensitivity simulation`
 - [ ] **Commit 23**: `feat(strategy-lab): implement acquisition channel mix simulation`
 - [ ] **Commit 24**: `test(strategy-lab): add comprehensive unit tests for financial formulas and simulation edge cases`
 
