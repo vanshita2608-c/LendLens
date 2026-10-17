@@ -48,9 +48,9 @@ class FinancialContributionEngine:
                 "total_revenue": 0.0,
                 "funding_cost": 0.0,
                 "expected_credit_loss": 0.0,
-                "operating_cost": 0.0,
-                "total_expenses": 0.0,
-                "net_contribution": 0.0,
+                "operating_cost": round(operating_cost_inr, 2),
+                "total_expenses": round(operating_cost_inr, 2),
+                "net_contribution": round(-operating_cost_inr, 2),
                 "net_interest_margin_pct": 0.0,
                 "return_on_disbursed_capital_pct": 0.0
             }

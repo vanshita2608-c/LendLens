@@ -42,7 +42,13 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 21**: `feat(strategy-lab): implement funnel-improvement and processing-time simulation models`
 - [x] **Commit 22**: `feat(strategy-lab): implement lending eligibility risk-sensitivity simulation`
 - [x] **Commit 23**: `feat(strategy-lab): implement acquisition channel mix simulation`
-- [ ] **Commit 24**: `test(strategy-lab): add comprehensive unit tests for financial formulas and simulation edge cases`
+- [x] **Commit 24**: `test(strategy-lab): add comprehensive unit tests for financial formulas and simulation edge cases`
+
+### Phase E: Frontend Shell & Executive Dashboard UI
+- [ ] **Commit 25**: `feat(frontend): build responsive application shell, navigation bar, and design system`
+- [ ] **Commit 26**: `feat(frontend): create reusable KPI cards, filter bar, metric badges, and formatters`
+- [ ] **Commit 27**: `feat(frontend): implement Executive Overview dashboard with charts and real-time backend API integration`
+- [ ] **Commit 28**: `feat(frontend): build Customer Journey and Funnel Intelligence page with stage investigation panel`
 
 ---
 *Log updated at: 2026-10-17*
