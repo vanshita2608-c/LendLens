@@ -10,8 +10,8 @@ def test_repayment_schedule_counts_and_components():
     tenure = 12
     emi = CreditAndLoanGenerator.calculate_monthly_emi(principal, rate, tenure)
     
-    disbursal = datetime(2025, 1, 1, tzinfo=timezone.utc)
-    as_of = datetime(2025, 4, 15, tzinfo=timezone.utc) # ~3.5 months later
+    disbursal = datetime(2025, 1, 1)
+    as_of = datetime(2025, 4, 15) # ~3.5 months later
     
     repayments, status, outstanding = generator.generate_loan_repayments(
         loan_id=1,
@@ -41,8 +41,8 @@ def test_delinquency_classification():
     tenure = 6
     emi = CreditAndLoanGenerator.calculate_monthly_emi(principal, rate, tenure)
     
-    disbursal = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    as_of = datetime(2024, 10, 1, tzinfo=timezone.utc) # 9 months later, long matured
+    disbursal = datetime(2024, 1, 1)
+    as_of = datetime(2024, 10, 1) # 9 months later, long matured
     
     # Very high PD should trigger delinquency or default
     repayments, status, outstanding = generator.generate_loan_repayments(
