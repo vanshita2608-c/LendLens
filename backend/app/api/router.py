@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
+from app.api.endpoints import dashboard
 
 api_router = APIRouter()
 
@@ -13,3 +14,5 @@ async def health_check():
         "environment": "development",
         "database": "connected",
     }
+
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
