@@ -22,7 +22,7 @@ This document tracks all development milestones, implementations, tests executed
 
 ### Phase B: Database Schema & Synthetic Data Generation
 - [x] **Commit 07**: `feat(db): design and implement relational SQLAlchemy database models`
-- [ ] **Commit 08**: `feat(db): configure database migrations and connection manager with SQLite/PostgreSQL support`
+- [x] **Commit 08**: `feat(db): configure database migrations and connection manager with SQLite/PostgreSQL support`
 - [ ] **Commit 09**: `feat(data): implement synthetic customer and loan application generator`
 - [ ] **Commit 10**: `feat(data): implement application event generator with realistic funnel timestamps`
 - [ ] **Commit 11**: `feat(data): add synthetic credit assessment, loan offer, and disbursal simulation`
