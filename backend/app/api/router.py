@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
-from app.api.endpoints import dashboard
+from app.api.endpoints import dashboard, funnel
 
 api_router = APIRouter()
 
@@ -16,3 +16,4 @@ async def health_check():
     }
 
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(funnel.router, prefix="/funnel", tags=["Funnel"])
