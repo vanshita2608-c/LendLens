@@ -50,3 +50,14 @@ def get_stage_timing(db: Session = Depends(get_db)):
 def get_stage_investigation(stage_name: str, db: Session = Depends(get_db)):
     return DropoffAnalyticsService.get_stage_investigation(db=db, stage_name=stage_name)
 
+@router.get("/channels", tags=["Funnel"])
+def get_channel_breakdown(db: Session = Depends(get_db)):
+    from app.analytics.segment_service import SegmentAnalyticsService
+    return SegmentAnalyticsService.get_channel_performance(db=db)
+
+@router.get("/segments", tags=["Funnel"])
+def get_segment_breakdown(db: Session = Depends(get_db)):
+    from app.analytics.segment_service import SegmentAnalyticsService
+    return SegmentAnalyticsService.get_segment_performance(db=db)
+
+
