@@ -26,6 +26,12 @@ class RepaymentGenerator:
         Generates month-by-month repayment schedule for a loan.
         Returns: (repayments_list, updated_loan_status, remaining_outstanding_principal)
         """
+        # Ensure timezone neutrality for consistent database comparisons
+        if disbursal_date.tzinfo is not None:
+            disbursal_date = disbursal_date.replace(tzinfo=None)
+        if as_of_date.tzinfo is not None:
+            as_of_date = as_of_date.replace(tzinfo=None)
+
         repayments = []
         monthly_rate = (annual_rate_pct / 100.0) / 12.0
         remaining_balance = principal
