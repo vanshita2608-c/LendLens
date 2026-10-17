@@ -4,6 +4,7 @@ from typing import Optional
 from datetime import datetime
 from app.db.session import get_db
 from app.analytics.funnel_service import FunnelAnalyticsService
+from app.analytics.dropoff_service import DropoffAnalyticsService
 
 router = APIRouter()
 
@@ -33,3 +34,19 @@ def get_funnel_stages():
         {"order": idx, "key": key, "label": label}
         for idx, (key, label) in enumerate(FunnelAnalyticsService.ORDERED_STAGES, start=1)
     ]
+
+@router.get("/dropoffs", tags=["Funnel"])
+def get_funnel_dropoffs(
+    stage: Optional[str] = Query(None, description="Optional stage filter"),
+    db: Session = Depends(get_db)
+):
+    return DropoffAnalyticsService.get_dropoff_reasons_summary(db=db, stage_name=stage)
+
+@router.get("/stage-timing", tags=["Funnel"])
+def get_stage_timing(db: Session = Depends(get_db)):
+    return DropoffAnalyticsService.get_stage_latencies(db=db)
+
+@router.get("/investigate/{stage_name}", tags=["Funnel"])
+def get_stage_investigation(stage_name: str, db: Session = Depends(get_db)):
+    return DropoffAnalyticsService.get_stage_investigation(db=db, stage_name=stage_name)
+
