@@ -26,7 +26,7 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 09**: `feat(data): implement synthetic customer and loan application generator`
 - [x] **Commit 10**: `feat(data): implement application event generator with realistic funnel timestamps`
 - [x] **Commit 11**: `feat(data): add synthetic credit assessment, loan offer, and disbursal simulation`
-- [ ] **Commit 12**: `feat(data): generate repayment schedules and delinquency outcomes`
+- [x] **Commit 12**: `feat(data): generate repayment schedules and delinquency outcomes`
 - [ ] **Commit 13**: `feat(data): add database seeding script and data integrity validator`
 
 ---
