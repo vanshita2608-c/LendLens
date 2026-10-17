@@ -18,7 +18,16 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 03**: `feat(frontend): scaffold Next.js TypeScript Tailwind frontend architecture`
 - [x] **Commit 04**: `feat(backend): configure FastAPI backend with health check and core app structure`
 - [x] **Commit 05**: `chore(env): configure environment variables and application settings`
-- [ ] **Commit 06**: `chore(docker): add Docker Compose and Dockerfile for containerized development`
+- [x] **Commit 06**: `chore(docker): add Docker Compose and Dockerfile for containerized development`
+
+### Phase B: Database Schema & Synthetic Data Generation
+- [ ] **Commit 07**: `feat(db): design and implement relational SQLAlchemy database models`
+- [ ] **Commit 08**: `feat(db): configure database migrations and connection manager with SQLite/PostgreSQL support`
+- [ ] **Commit 09**: `feat(data): implement synthetic customer and loan application generator`
+- [ ] **Commit 10**: `feat(data): implement application event generator with realistic funnel timestamps`
+- [ ] **Commit 11**: `feat(data): add synthetic credit assessment, loan offer, and disbursal simulation`
+- [ ] **Commit 12**: `feat(data): generate repayment schedules and delinquency outcomes`
+- [ ] **Commit 13**: `feat(data): add database seeding script and data integrity validator`
 
 ---
 *Log updated at: 2026-10-17*

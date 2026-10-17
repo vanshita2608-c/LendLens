@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lendlens-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: lendlens_user
+      POSTGRES_PASSWORD: lendlens_password
+      POSTGRES_DB: lendlens_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lendlens_user -d lendlens_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lendlens-backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://lendlens_user:lendlens_password@db:5432/lendlens_db
+      - ENVIRONMENT=production
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/venv
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lendlens-frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
