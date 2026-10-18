@@ -54,7 +54,7 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 29**: `feat(ml): implement credit-risk feature engineering pipeline with temporal split and leakage prevention`
 - [x] **Commit 30**: `feat(ml): train baseline Logistic Regression and Random Forest models with evaluation metrics`
 - [x] **Commit 31**: `feat(ml): implement model persistence, prediction service, and SHAP/feature importance explainer`
-- [ ] **Commit 32**: `feat(api): expose credit intelligence endpoints for model performance, prediction, and explanations`
+- [x] **Commit 32**: `feat(api): expose credit intelligence endpoints for model performance, prediction, and explanations`
 - [ ] **Commit 33**: `feat(frontend): build Credit Intelligence UI with interactive application risk assessment and model card`
 
 ---
