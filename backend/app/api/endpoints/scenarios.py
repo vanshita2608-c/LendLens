@@ -130,9 +130,23 @@ def delete_scenario(scenario_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scenario with ID {scenario_id} not found.")
     return {"status": "deleted", "scenario_id": scenario_id}
 
+from app.services.decision_brief_generator import DecisionBriefGenerator
+
 @router.post("/compare", response_model=ScenarioCompareResponse, tags=["Strategy Lab"])
 def compare_scenarios(request: ScenarioCompareRequest, db: Session = Depends(get_db)):
     """
     Compares two or more scenarios side-by-side with standardized KPI comparison matrices.
     """
     return ScenarioService.compare_scenarios(db=db, scenario_ids=request.scenario_ids)
+
+@router.get("/{scenario_id}/decision-brief", tags=["Strategy Lab"])
+@router.post("/{scenario_id}/decision-brief", tags=["Strategy Lab"])
+def get_decision_brief(scenario_id: int, db: Session = Depends(get_db)):
+    """
+    Generates an evidence-based 12-section Product Decision Brief formatted in Markdown.
+    Includes business problem, assumptions, simulated P&L, risks, guardrails, and APM recommendation.
+    """
+    scenario = ScenarioService.get_scenario(db=db, scenario_id=scenario_id)
+    if not scenario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scenario with ID {scenario_id} not found.")
+    return DecisionBriefGenerator.generate_brief(scenario)
