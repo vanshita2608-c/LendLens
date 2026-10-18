@@ -58,7 +58,7 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 33**: `feat(frontend): build Credit Intelligence UI with interactive application risk assessment and model card`
 
 ### Phase G: Portfolio Analytics & Strategy Lab Interactive Simulator
-- [ ] **Commit 34**: `feat(frontend): build Lending Portfolio Analytics UI with vintage curves and PAR delinquency charts`
+- [x] **Commit 34**: `feat(frontend): build Lending Portfolio Analytics UI with vintage curves and PAR delinquency charts`
 - [ ] **Commit 35**: `feat(api): implement scenario persistence and comparison API endpoints`
 - [ ] **Commit 36**: `feat(frontend): build Strategy Lab simulation workspace with interactive policy parameter sliders`
 - [ ] **Commit 37**: `feat(strategy-lab): implement automated Product Decision Brief generator with markdown export`
