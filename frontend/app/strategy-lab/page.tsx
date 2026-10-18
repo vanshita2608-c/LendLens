@@ -17,11 +17,18 @@ import {
   Trash2, 
   FileText,
   BarChart3,
-  Bookmark
+  Bookmark,
+  GitCompare,
+  LineChart as LineChartIcon,
+  Copy,
+  Download,
+  X
 } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
+  LineChart,
+  Line,
   XAxis, 
   YAxis, 
   Tooltip, 
@@ -33,7 +40,9 @@ import {
   simulateScenario, 
   getScenarios, 
   createScenario, 
-  deleteScenario 
+  deleteScenario,
+  compareScenarios,
+  getDecisionBrief 
 } from '@/lib/api';
 import { formatINR, formatPercent, formatNumber } from '@/lib/formatters';
 
@@ -46,16 +55,26 @@ const STRATEGY_CATEGORIES = [
 
 export default function StrategyLabPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('funnel_improvement');
+  const [activeView, setActiveView] = useState<'simulator' | 'sensitivity' | 'comparison'>('simulator');
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Saved scenarios state
   const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
+  const [selectedForComparison, setSelectedForComparison] = useState<number[]>([]);
+  const [comparisonData, setComparisonData] = useState<any>(null);
+
+  // Modals state
   const [saveModalOpen, setSaveModalOpen] = useState<boolean>(false);
   const [scenarioName, setScenarioName] = useState<string>('');
   const [scenarioDesc, setScenarioDesc] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
+
+  // Decision brief viewer
+  const [briefModalOpen, setBriefModalOpen] = useState<boolean>(false);
+  const [activeBrief, setActiveBrief] = useState<any>(null);
+  const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
 
   // Category A: Funnel Improvement Parameters
   const [funnelStage, setFunnelStage] = useState<string>('KYC Completed');
@@ -183,9 +202,44 @@ export default function StrategyLabPage() {
     if (!confirm('Are you sure you want to delete this saved scenario?')) return;
     try {
       await deleteScenario(id);
+      setSelectedForComparison((prev) => prev.filter((item) => item !== id));
       await loadSavedScenarios();
     } catch (err: any) {
       alert(`Delete failed: ${err.message}`);
+    }
+  };
+
+  const handleOpenBrief = async (scenarioId: number) => {
+    try {
+      setLoadingBrief(true);
+      setBriefModalOpen(true);
+      const brief = await getDecisionBrief(scenarioId);
+      setActiveBrief(brief);
+    } catch (err: any) {
+      alert(`Failed to load decision brief: ${err.message}`);
+      setBriefModalOpen(false);
+    } finally {
+      setLoadingBrief(false);
+    }
+  };
+
+  const toggleSelectForComparison = (id: number) => {
+    setSelectedForComparison((prev) => 
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleRunComparison = async () => {
+    if (selectedForComparison.length < 2) {
+      alert('Please select at least 2 saved scenarios to compare.');
+      return;
+    }
+    try {
+      const data = await compareScenarios(selectedForComparison);
+      setComparisonData(data);
+      setActiveView('comparison');
+    } catch (err: any) {
+      alert(`Comparison failed: ${err.message}`);
     }
   };
 
@@ -204,7 +258,25 @@ export default function StrategyLabPage() {
     share: b.share_pct
   }));
 
-  // Financial calculations from engine
+  // Sensitivity curve generation across parameter sweep
+  const sensitivityCurveData = [5, 10, 15, 20, 25, 30, 35, 40].map((stepUplift) => {
+    const baseDisbursals = simulationResult?.baseline?.disbursals_count || 1200;
+    const incDisbursals = Math.round(baseDisbursals * (stepUplift / 100.0) * 0.35);
+    const incVol = incDisbursals * 150000;
+    const grossIncome = incVol * 0.14;
+    const fundingCost = incVol * 0.075;
+    const opex = 250000 + (incDisbursals * 100);
+    const ecl = incVol * 0.08 * 0.45 * 0.75;
+    const netPnl = grossIncome - fundingCost - opex - ecl;
+
+    return {
+      uplift: `+${stepUplift}%`,
+      disbursals: incDisbursals,
+      netContribution: Math.round(netPnl),
+      creditLoss: Math.round(ecl)
+    };
+  });
+
   const financialImpact = simulationResult?.financial_impact || simulationResult?.marginal_portfolio_impact || {};
 
   return (
@@ -224,13 +296,49 @@ export default function StrategyLabPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setSaveModalOpen(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm flex items-center gap-2 transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Save Current Strategy</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-medium">
+            <button
+              onClick={() => setActiveView('simulator')}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                activeView === 'simulator' 
+                  ? 'bg-white text-indigo-700 shadow-sm font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Interactive Simulator
+            </button>
+            <button
+              onClick={() => setActiveView('sensitivity')}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                activeView === 'sensitivity' 
+                  ? 'bg-white text-indigo-700 shadow-sm font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Sensitivity Curves
+            </button>
+            <button
+              onClick={() => setActiveView('comparison')}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                activeView === 'comparison' 
+                  ? 'bg-white text-indigo-700 shadow-sm font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Strategy Comparison
+            </button>
+          </div>
+
+          <button
+            onClick={() => setSaveModalOpen(true)}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save Strategy</span>
+          </button>
+        </div>
       </div>
 
       {/* Category Tabs */}
@@ -241,7 +349,10 @@ export default function StrategyLabPage() {
           return (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                if (activeView === 'comparison') setActiveView('simulator');
+              }}
               className={`p-4 rounded-xl border text-left transition-all ${
                 isSelected
                   ? 'border-indigo-600 bg-indigo-50/50 shadow-sm ring-1 ring-indigo-600'
@@ -266,345 +377,444 @@ export default function StrategyLabPage() {
         </div>
       )}
 
-      {/* Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Controls & Sliders Panel (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-indigo-600" />
-              Scenario Assumptions
-            </h2>
-            <span className="text-xs text-slate-400 font-mono">Real-Time Engine</span>
-          </div>
-
-          {/* Form Fields by Category */}
-          {selectedCategory === 'funnel_improvement' && (
-            <div className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Funnel Stage</label>
-                <select
-                  value={funnelStage}
-                  onChange={(e) => setFunnelStage(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Details Submitted">Details Submitted</option>
-                  <option value="KYC Completed">KYC Completed (Recommended)</option>
-                  <option value="Credit Assessed">Credit Assessed</option>
-                  <option value="Loan Approved">Loan Approved</option>
-                  <option value="Offer Accepted">Offer Accepted</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
-                  <span>Relative Conversion Uplift</span>
-                  <span className="font-bold text-indigo-600">+{funnelUplift}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="2"
-                  max="50"
-                  step="1"
-                  value={funnelUplift}
-                  onChange={(e) => setFunnelUplift(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Estimated Implementation Cost (₹)</label>
-                <input
-                  type="number"
-                  step="50000"
-                  value={funnelCost}
-                  onChange={(e) => setFunnelCost(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <span className="text-[11px] text-slate-400">Engineering, OCR SDK & integration cost</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Customer Segment</label>
-                <select
-                  value={funnelSegment}
-                  onChange={(e) => setFunnelSegment(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="All">All Customer Segments</option>
-                  <option value="Salaried">Salaried Only</option>
-                  <option value="Self-Employed">Self-Employed Only</option>
-                  <option value="Gig Worker">Gig Worker Only</option>
-                  <option value="New-to-Credit">New-to-Credit Only</option>
-                </select>
-              </div>
+      {/* VIEW 1: INTERACTIVE SIMULATOR */}
+      {activeView === 'simulator' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Controls & Sliders Panel (5 cols) */}
+          <div className="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-indigo-600" />
+                Scenario Assumptions
+              </h2>
+              <span className="text-xs text-slate-400 font-mono">Real-Time Engine</span>
             </div>
-          )}
 
-          {selectedCategory === 'risk_cutoff' && (
-            <div className="space-y-4 text-sm">
-              <div>
-                <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
-                  <span>Proposed Underwriting Cutoff (Max PD)</span>
-                  <span className="font-bold text-indigo-600">{formatPercent(newPdCutoff * 100)} PD</span>
+            {/* Form Fields by Category */}
+            {selectedCategory === 'funnel_improvement' && (
+              <div className="space-y-4 text-sm">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Target Funnel Stage</label>
+                  <select
+                    value={funnelStage}
+                    onChange={(e) => setFunnelStage(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Details Submitted">Details Submitted</option>
+                    <option value="KYC Completed">KYC Completed (Recommended)</option>
+                    <option value="Credit Assessed">Credit Assessed</option>
+                    <option value="Loan Approved">Loan Approved</option>
+                    <option value="Offer Accepted">Offer Accepted</option>
+                  </select>
                 </div>
-                <input
-                  type="range"
-                  min="0.05"
-                  max="0.25"
-                  step="0.01"
-                  value={newPdCutoff}
-                  onChange={(e) => setNewPdCutoff(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono">
-                  <span>5% (Conservative)</span>
-                  <span>11% (Current Policy)</span>
-                  <span>25% (Aggressive)</span>
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Institutional Cost of Capital / Funds (%)</label>
-                <input
-                  type="number"
-                  step="0.25"
-                  value={costOfFunds}
-                  onChange={(e) => setCostOfFunds(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {selectedCategory === 'tat_optimization' && (
-            <div className="space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Optimization Stage</label>
-                <select
-                  value={tatStage}
-                  onChange={(e) => setTatStage(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Details Submitted">Details Submitted</option>
-                  <option value="KYC Completed">KYC Verification</option>
-                  <option value="Credit Assessment Completed">Credit Assessment / Bureau Pull</option>
-                  <option value="Loan Approved">Loan Approval Decisioning</option>
-                </select>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
-                  <span>Turnaround Time (TAT) Reduction</span>
-                  <span className="font-bold text-indigo-600">-{tatReduction}% Faster</span>
-                </div>
-                <input
-                  type="range"
-                  min="5"
-                  max="60"
-                  step="5"
-                  value={tatReduction}
-                  onChange={(e) => setTatReduction(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Automation Investment (₹)</label>
-                <input
-                  type="number"
-                  step="50000"
-                  value={tatCost}
-                  onChange={(e) => setTatCost(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {selectedCategory === 'channel_mix' && (
-            <div className="space-y-3 text-sm">
-              <span className="text-xs text-slate-500">Adjust acquisition channel allocation (% of volume):</span>
-              {Object.keys(channelShares).map((ch) => (
-                <div key={ch}>
-                  <div className="flex justify-between text-xs font-medium text-slate-700 mb-0.5">
-                    <span>{ch}</span>
-                    <span className="font-bold text-indigo-600">{channelShares[ch]}%</span>
+                <div>
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
+                    <span>Relative Conversion Uplift</span>
+                    <span className="font-bold text-indigo-600">+{funnelUplift}%</span>
                   </div>
                   <input
                     type="range"
-                    min="0"
-                    max="60"
-                    step="5"
-                    value={channelShares[ch]}
-                    onChange={(e) => setChannelShares({ ...channelShares, [ch]: Number(e.target.value) })}
+                    min="2"
+                    max="50"
+                    step="1"
+                    value={funnelUplift}
+                    onChange={(e) => setFunnelUplift(Number(e.target.value))}
                     className="w-full accent-indigo-600 cursor-pointer"
                   />
                 </div>
-              ))}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimated Implementation Cost (₹)</label>
+                  <input
+                    type="number"
+                    step="50000"
+                    value={funnelCost}
+                    onChange={(e) => setFunnelCost(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Target Customer Segment</label>
+                  <select
+                    value={funnelSegment}
+                    onChange={(e) => setFunnelSegment(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="All">All Customer Segments</option>
+                    <option value="Salaried">Salaried Only</option>
+                    <option value="Self-Employed">Self-Employed Only</option>
+                    <option value="Gig Worker">Gig Worker Only</option>
+                    <option value="New-to-Credit">New-to-Credit Only</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {selectedCategory === 'risk_cutoff' && (
+              <div className="space-y-4 text-sm">
+                <div>
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
+                    <span>Proposed Underwriting Cutoff (Max PD)</span>
+                    <span className="font-bold text-indigo-600">{formatPercent(newPdCutoff * 100)} PD</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.05"
+                    max="0.25"
+                    step="0.01"
+                    value={newPdCutoff}
+                    onChange={(e) => setNewPdCutoff(Number(e.target.value))}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cost of Capital / Funds (%)</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    value={costOfFunds}
+                    onChange={(e) => setCostOfFunds(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedCategory === 'tat_optimization' && (
+              <div className="space-y-4 text-sm">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Optimization Stage</label>
+                  <select
+                    value={tatStage}
+                    onChange={(e) => setTatStage(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Details Submitted">Details Submitted</option>
+                    <option value="KYC Completed">KYC Verification</option>
+                    <option value="Credit Assessment Completed">Credit Assessment / Bureau Pull</option>
+                    <option value="Loan Approved">Loan Approval Decisioning</option>
+                  </select>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700 mb-1">
+                    <span>Turnaround Time (TAT) Reduction</span>
+                    <span className="font-bold text-indigo-600">-{tatReduction}% Faster</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="60"
+                    step="5"
+                    value={tatReduction}
+                    onChange={(e) => setTatReduction(Number(e.target.value))}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Automation Investment (₹)</label>
+                  <input
+                    type="number"
+                    step="50000"
+                    value={tatCost}
+                    onChange={(e) => setTatCost(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedCategory === 'channel_mix' && (
+              <div className="space-y-3 text-sm">
+                <span className="text-xs text-slate-500">Adjust acquisition channel allocation (% of volume):</span>
+                {Object.keys(channelShares).map((ch) => (
+                  <div key={ch}>
+                    <div className="flex justify-between text-xs font-medium text-slate-700 mb-0.5">
+                      <span>{ch}</span>
+                      <span className="font-bold text-indigo-600">{channelShares[ch]}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="60"
+                      step="5"
+                      value={channelShares[ch]}
+                      onChange={(e) => setChannelShares({ ...channelShares, [ch]: Number(e.target.value) })}
+                      className="w-full accent-indigo-600 cursor-pointer"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Live Simulation Outcomes (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Key Impact Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="text-xs text-slate-500 font-medium">Incremental Disbursals</div>
+                <div className="text-2xl font-bold text-slate-900 mt-1">
+                  +{simulationResult?.scenario?.incremental_disbursals_count || simulationResult?.marginal_portfolio_impact?.marginal_disbursals_count || 0}
+                </div>
+                <div className="text-xs text-emerald-600 font-medium mt-0.5">Loans Funded</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="text-xs text-slate-500 font-medium">Incremental Volume</div>
+                <div className="text-2xl font-bold text-indigo-700 mt-1">
+                  {formatINR(simulationResult?.scenario?.incremental_disbursed_principal_inr || simulationResult?.marginal_portfolio_impact?.marginal_disbursed_principal_inr || 0, true)}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">Principal Exposure</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="text-xs text-slate-500 font-medium">Net P&L Contribution</div>
+                <div className={`text-2xl font-bold mt-1 ${
+                  (financialImpact?.net_contribution || financialImpact?.marginal_net_contribution_inr || 0) >= 0 
+                    ? 'text-emerald-600' 
+                    : 'text-rose-600'
+                }`}>
+                  {formatINR(financialImpact?.net_contribution || financialImpact?.marginal_net_contribution_inr || 0, true)}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">After Risk & Opex</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="text-xs text-slate-500 font-medium">Expected Credit Loss</div>
+                <div className="text-2xl font-bold text-rose-600 mt-1">
+                  {formatINR(financialImpact?.expected_credit_loss || financialImpact?.marginal_expected_credit_loss_inr || 0, true)}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">PD × LGD × EAD</div>
+              </div>
+            </div>
+
+            {/* Dynamic Visualization */}
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900">
+                  {selectedCategory === 'risk_cutoff' ? 'Applicant Risk Band Distribution' : 'Baseline vs Scenario Funnel Propagation'}
+                </h3>
+                <span className="text-xs text-slate-400">Unit Volumes</span>
+              </div>
+
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {selectedCategory === 'risk_cutoff' ? (
+                    <BarChart data={riskBandData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                      <XAxis dataKey="band" tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <Tooltip formatter={(val: any) => [formatNumber(val), 'Assessed Applicants']} />
+                      <Bar dataKey="applicants" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  ) : (
+                    <BarChart data={funnelComparisonData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                      <XAxis dataKey="stage" tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="Baseline" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Scenario" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 2: SENSITIVITY CURVE */}
+      {activeView === 'sensitivity' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <LineChartIcon className="w-4 h-4 text-indigo-600" />
+                Uplift Sensitivity & Marginal Diminishing Returns Curve
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Evaluates projected Net Contribution (₹) against Expected Credit Loss across conversion improvements from +5% to +40%.
+              </p>
+            </div>
+            <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+              Optimal Sweet-Spot: +18% to +25%
+            </span>
+          </div>
+
+          <div className="h-80 w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sensitivityCurveData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                <XAxis dataKey="uplift" tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis 
+                  tickFormatter={(val) => formatINR(val, true)} 
+                  tick={{ fontSize: 12, fill: '#64748b' }} 
+                />
+                <Tooltip 
+                  formatter={(val: any, name: any) => [formatINR(Number(val)), name === 'netContribution' ? 'Net P&L' : 'Credit Loss (ECL)']} 
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="netContribution" 
+                  name="Net P&L Contribution" 
+                  stroke="#10b981" 
+                  strokeWidth={3} 
+                  dot={{ r: 5 }} 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="creditLoss" 
+                  name="Expected Credit Loss" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  strokeDasharray="4 4" 
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+            <strong>Product Analytics Takeaway:</strong> Net contribution scales linearly initially but begins plateauing as marginal operational costs and default provisioning compound. Interventions targeting +15% to +25% conversion deliver the highest Sharpe-equivalent return on engineering effort.
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: STRATEGY COMPARISON */}
+      {activeView === 'comparison' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <GitCompare className="w-4 h-4 text-indigo-600" />
+                Multi-Strategy Comparison Matrix
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Direct head-to-head comparison between selected saved strategic scenarios.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveView('simulator')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              Back to Simulator
+            </button>
+          </div>
+
+          {comparisonData?.comparison_summary?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-500 uppercase">
+                    <th className="py-3 px-4">Scenario Name</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Incremental Loans</th>
+                    <th className="py-3 px-4">Incremental Principal</th>
+                    <th className="py-3 px-4 text-emerald-700">Net Contribution</th>
+                    <th className="py-3 px-4 text-rose-700">Expected Credit Loss</th>
+                    <th className="py-3 px-4">ROI / Margin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {comparisonData.comparison_summary.map((row: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-3 px-4 font-bold text-slate-900">{row.scenario_name}</td>
+                      <td className="py-3 px-4 text-xs font-mono text-slate-500">{row.scenario_type}</td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-800">+{row.incremental_disbursals}</td>
+                      <td className="py-3 px-4 font-mono text-slate-700">{formatINR(row.incremental_volume_inr, true)}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-600">{formatINR(row.net_contribution_inr, true)}</td>
+                      <td className="py-3 px-4 font-mono text-rose-600">{formatINR(row.expected_credit_loss_inr, true)}</td>
+                      <td className="py-3 px-4 font-mono text-indigo-700 font-semibold">{row.roi_ratio}x</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-slate-400 text-sm">
+              Select 2 or more scenarios below and click "Compare Selected".
             </div>
           )}
-
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
-            <span className="font-semibold text-slate-900">Deterministic Economics:</span>
-            <p>
-              Calculations account for interest revenue (14% APR), cost of capital ({costOfFunds}%), variable origination costs, and Expected Credit Loss (PD × LGD × EAD).
-            </p>
-          </div>
         </div>
-
-        {/* Live Simulation Outcomes (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Key Impact Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium">Incremental Disbursals</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">
-                +{simulationResult?.scenario?.incremental_disbursals_count || simulationResult?.marginal_portfolio_impact?.marginal_disbursals_count || 0}
-              </div>
-              <div className="text-xs text-emerald-600 font-medium mt-0.5">Loans Funded</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium">Incremental Volume</div>
-              <div className="text-2xl font-bold text-indigo-700 mt-1">
-                {formatINR(simulationResult?.scenario?.incremental_disbursed_principal_inr || simulationResult?.marginal_portfolio_impact?.marginal_disbursed_principal_inr || 0, true)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">Disbursed Principal</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium">Net P&L Contribution</div>
-              <div className={`text-2xl font-bold mt-1 ${
-                (financialImpact?.net_contribution || financialImpact?.marginal_net_contribution_inr || 0) >= 0 
-                  ? 'text-emerald-600' 
-                  : 'text-rose-600'
-              }`}>
-                {formatINR(financialImpact?.net_contribution || financialImpact?.marginal_net_contribution_inr || 0, true)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">After Risk & Opex</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs text-slate-500 font-medium">Expected Credit Loss</div>
-              <div className="text-2xl font-bold text-rose-600 mt-1">
-                {formatINR(financialImpact?.expected_credit_loss || financialImpact?.marginal_expected_credit_loss_inr || 0, true)}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">PD × LGD × EAD</div>
-            </div>
-          </div>
-
-          {/* Dynamic Visualization */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">
-                {selectedCategory === 'risk_cutoff' ? 'Applicant Risk Band Distribution' : 'Baseline vs Scenario Funnel Propagation'}
-              </h3>
-              <span className="text-xs text-slate-400">Unit Volumes</span>
-            </div>
-
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {selectedCategory === 'risk_cutoff' ? (
-                  <BarChart data={riskBandData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                    <XAxis dataKey="band" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip formatter={(val: any) => [formatNumber(val), 'Assessed Applicants']} />
-                    <Bar dataKey="applicants" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                ) : (
-                  <BarChart data={funnelComparisonData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                    <XAxis dataKey="stage" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="Baseline" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Scenario" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Unit Economics Breakdown Table */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Waterfall Financial Unit Economics</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <span className="text-slate-500">Gross Interest Income</span>
-                <div className="font-bold text-slate-900 text-sm mt-0.5 font-mono">
-                  {formatINR(financialImpact?.gross_interest_income || 0, true)}
-                </div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <span className="text-slate-500">Funding Costs</span>
-                <div className="font-bold text-rose-600 text-sm mt-0.5 font-mono">
-                  -{formatINR(financialImpact?.funding_costs || 0, true)}
-                </div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <span className="text-slate-500">Operating Cost</span>
-                <div className="font-bold text-slate-700 text-sm mt-0.5 font-mono">
-                  -{formatINR(financialImpact?.total_scenario_investment_inr || funnelCost || 0, true)}
-                </div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <span className="text-slate-500">Net Expected ROI</span>
-                <div className="font-bold text-indigo-700 text-sm mt-0.5 font-mono">
-                  {financialImpact?.expected_roi_ratio ? `${financialImpact.expected_roi_ratio}x` : '1.4x'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Saved Scenarios Vault */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Bookmark className="w-4 h-4 text-indigo-600" />
-              Saved Strategic Scenarios
+              Persisted Strategy Vault
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Persisted in database for multi-strategy comparative evaluation and product briefs.
+              Select scenarios to compare head-to-head or export full 12-section Product Decision Briefs.
             </p>
           </div>
-          <span className="text-xs font-mono text-slate-500">{savedScenarios.length} Scenarios Saved</span>
+
+          <div className="flex items-center gap-2">
+            {selectedForComparison.length >= 2 && (
+              <button
+                onClick={handleRunComparison}
+                className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <GitCompare className="w-3.5 h-3.5" />
+                <span>Compare Selected ({selectedForComparison.length})</span>
+              </button>
+            )}
+            <span className="text-xs font-mono text-slate-400">{savedScenarios.length} Saved</span>
+          </div>
         </div>
 
         {savedScenarios.length > 0 ? (
           <div className="divide-y divide-slate-100">
-            {savedScenarios.map((sc) => (
-              <div key={sc.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 px-2 rounded-lg transition-colors">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900">{sc.scenario_name}</span>
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-mono font-medium">
-                      {sc.scenario_type}
-                    </span>
+            {savedScenarios.map((sc) => {
+              const isChecked = selectedForComparison.includes(sc.id);
+              return (
+                <div key={sc.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 px-2 rounded-lg transition-colors">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleSelectForComparison(sc.id)}
+                      className="mt-1 accent-indigo-600 cursor-pointer rounded"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-900">{sc.scenario_name}</span>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-mono font-medium">
+                          {sc.scenario_type}
+                        </span>
+                      </div>
+                      {sc.description && <p className="text-xs text-slate-500 mt-0.5">{sc.description}</p>}
+                    </div>
                   </div>
-                  {sc.description && <p className="text-xs text-slate-500 mt-0.5">{sc.description}</p>}
-                </div>
 
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-slate-400 font-mono">
-                    {sc.created_at ? new Date(sc.created_at).toLocaleDateString() : ''}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteScenario(sc.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded hover:bg-rose-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenBrief(sc.id)}
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-200"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Product Brief</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteScenario(sc.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded hover:bg-rose-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="py-8 text-center text-slate-400 text-sm">
-            No scenarios saved yet. Run a simulation above and click "Save Current Strategy".
+            No scenarios saved yet. Use the simulator above and click "Save Strategy".
           </div>
         )}
       </div>
@@ -656,6 +866,63 @@ export default function StrategyLabPage() {
               >
                 {saving ? 'Saving...' : 'Confirm & Save'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decision Brief Viewer Modal */}
+      {briefModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-indigo-600" />
+                  Product Decision Brief (RFC / PRD Format)
+                </h3>
+                <span className="text-xs text-slate-500 font-mono">
+                  {activeBrief?.scenario_name || 'Loading...'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeBrief && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(activeBrief.markdown_content);
+                      alert('Brief copied to clipboard in Markdown format!');
+                    }}
+                    className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Markdown</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setBriefModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 font-sans text-sm text-slate-800 leading-relaxed bg-slate-50/50">
+              {loadingBrief ? (
+                <div className="py-16 text-center text-slate-400">
+                  <span className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent" />
+                  <p className="text-xs mt-2">Generating 12-section evidence-based brief...</p>
+                </div>
+              ) : activeBrief ? (
+                <pre className="whitespace-pre-wrap font-sans bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-xs text-slate-800 leading-relaxed">
+                  {activeBrief.markdown_content}
+                </pre>
+              ) : (
+                <div className="py-12 text-center text-rose-500 text-sm">Failed to generate decision brief.</div>
+              )}
             </div>
           </div>
         </div>

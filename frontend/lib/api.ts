@@ -160,3 +160,7 @@ export async function compareScenarios(scenarioIds: number[]) {
     body: JSON.stringify({ scenario_ids: scenarioIds }),
   });
 }
+
+export async function getDecisionBrief(scenarioId: number) {
+  return fetchApi<any>(`/api/scenarios/${scenarioId}/decision-brief`);
+}
