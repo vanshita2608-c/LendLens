@@ -48,7 +48,14 @@ This document tracks all development milestones, implementations, tests executed
 - [x] **Commit 25**: `feat(frontend): build responsive application shell, navigation bar, and design system`
 - [x] **Commit 26**: `feat(frontend): create reusable KPI cards, filter bar, metric badges, and formatters`
 - [x] **Commit 27**: `feat(frontend): implement Executive Overview dashboard with charts and real-time backend API integration`
-- [ ] **Commit 28**: `feat(frontend): build Customer Journey and Funnel Intelligence page with stage investigation panel`
+- [x] **Commit 28**: `feat(frontend): build Customer Journey and Funnel Intelligence page with stage investigation panel`
+
+### Phase F: Credit Intelligence & Machine Learning Pipeline
+- [ ] **Commit 29**: `feat(ml): implement credit-risk feature engineering pipeline with temporal split and leakage prevention`
+- [ ] **Commit 30**: `feat(ml): train baseline Logistic Regression and Random Forest models with evaluation metrics`
+- [ ] **Commit 31**: `feat(ml): implement model persistence, prediction service, and SHAP/feature importance explainer`
+- [ ] **Commit 32**: `feat(api): expose credit intelligence endpoints for model performance, prediction, and explanations`
+- [ ] **Commit 33**: `feat(frontend): build Credit Intelligence UI with interactive application risk assessment and model card`
 
 ---
 *Log updated at: 2026-10-17*
