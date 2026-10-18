@@ -164,3 +164,18 @@ export async function compareScenarios(scenarioIds: number[]) {
 export async function getDecisionBrief(scenarioId: number) {
   return fetchApi<any>(`/api/scenarios/${scenarioId}/decision-brief`);
 }
+
+// 6. AI Product Copilot
+export async function queryCopilot(query: string) {
+  return fetchApi<any>('/api/copilot/query', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+}
+
+export async function getExperimentSuggestions(problemArea?: string) {
+  return fetchApi<any>('/api/copilot/experiment-suggestions', {
+    method: 'POST',
+    body: JSON.stringify({ problem_area: problemArea }),
+  });
+}
