@@ -45,7 +45,9 @@ class FunnelImprovementSimulator:
 
         target_idx = -1
         for idx, s in enumerate(stages):
-            if s["stage_key"] == target_stage:
+            if (s["stage_key"] == target_stage or 
+                s.get("stage_name") == target_stage or 
+                s["stage_key"].lower() == target_stage.lower().replace(" ", "_")):
                 target_idx = idx
                 break
 

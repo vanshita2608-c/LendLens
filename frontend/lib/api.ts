@@ -107,3 +107,56 @@ export async function predictCreditRisk(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+// 5. Strategy Lab & Scenarios
+export async function simulateScenario(payload: any) {
+  return fetchApi<any>('/api/scenarios/simulate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getScenarios(scenario_type?: string) {
+  const q = scenario_type ? `?scenario_type=${scenario_type}` : '';
+  return fetchApi<any[]>(`/api/scenarios${q}`);
+}
+
+export async function getScenario(scenarioId: number) {
+  return fetchApi<any>(`/api/scenarios/${scenarioId}`);
+}
+
+export async function createScenario(payload: {
+  scenario_name: string;
+  description?: string;
+  scenario_type: string;
+  assumptions: any;
+}) {
+  return fetchApi<any>('/api/scenarios', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateScenario(scenarioId: number, payload: {
+  scenario_name?: string;
+  description?: string;
+  assumptions?: any;
+}) {
+  return fetchApi<any>(`/api/scenarios/${scenarioId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteScenario(scenarioId: number) {
+  return fetchApi<any>(`/api/scenarios/${scenarioId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function compareScenarios(scenarioIds: number[]) {
+  return fetchApi<any>('/api/scenarios/compare', {
+    method: 'POST',
+    body: JSON.stringify({ scenario_ids: scenarioIds }),
+  });
+}
