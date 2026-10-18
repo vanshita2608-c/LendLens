@@ -87,3 +87,23 @@ export async function getVintageAnalysis() {
 export async function getDelinquencyBuckets() {
   return fetchApi<any>('/api/portfolio/delinquency');
 }
+
+// 4. Credit Intelligence
+export async function getCreditModelMetrics() {
+  return fetchApi<any>('/api/credit/model-metrics');
+}
+
+export async function predictCreditRisk(payload: {
+  monthly_income: number;
+  credit_score: number;
+  debt_to_income_ratio: number;
+  requested_amount: number;
+  requested_tenure_months: number;
+  customer_segment: string;
+  acquisition_channel: string;
+}) {
+  return fetchApi<any>('/api/credit/predict', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
