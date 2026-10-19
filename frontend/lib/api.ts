@@ -179,3 +179,35 @@ export async function getExperimentSuggestions(problemArea?: string) {
     body: JSON.stringify({ problem_area: problemArea }),
   });
 }
+
+// 7. Product Experiments
+export async function getExperiments(status?: string, sortBy: string = 'rice') {
+  const q = new URLSearchParams();
+  if (status && status !== 'All') q.set('status', status);
+  if (sortBy) q.set('sort_by', sortBy);
+  return fetchApi<any[]>(`/api/experiments?${q.toString()}`);
+}
+
+export async function getExperiment(experimentId: number) {
+  return fetchApi<any>(`/api/experiments/${experimentId}`);
+}
+
+export async function createExperiment(payload: any) {
+  return fetchApi<any>('/api/experiments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateExperiment(experimentId: number, payload: any) {
+  return fetchApi<any>(`/api/experiments/${experimentId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteExperiment(experimentId: number) {
+  return fetchApi<any>(`/api/experiments/${experimentId}`, {
+    method: 'DELETE',
+  });
+}

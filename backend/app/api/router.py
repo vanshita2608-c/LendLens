@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
-from app.api.endpoints import dashboard, funnel, portfolio, credit, scenarios, copilot
+from app.api.endpoints import dashboard, funnel, portfolio, credit, scenarios, copilot, experiments
 
 api_router = APIRouter()
 
@@ -21,3 +21,4 @@ api_router.include_router(portfolio.router, prefix="/portfolio", tags=["Portfoli
 api_router.include_router(credit.router, prefix="/credit", tags=["Credit Intelligence"])
 api_router.include_router(scenarios.router, prefix="/scenarios", tags=["Strategy Lab"])
 api_router.include_router(copilot.router, prefix="/copilot", tags=["AI Copilot"])
+api_router.include_router(experiments.router, prefix="/experiments", tags=["Product Experiments"])
