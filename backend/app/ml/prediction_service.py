@@ -1,10 +1,20 @@
 import os
+import sys
 import json
+from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional
 import shap
+
+# Ensure workspace project root is in sys.path regardless of where the app is launched from
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+_BACKEND_DIR = _PROJECT_ROOT / "backend"
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 from ml.training.feature_pipeline import CreditFeaturePipeline
 from data.generation.credit_and_loan_generator import CreditAndLoanGenerator
@@ -24,8 +34,8 @@ class CreditPredictionService:
     _metrics = None
     _explainer = None
 
-    MODEL_PATH = "ml/artifacts/credit_model_v1.joblib"
-    METRICS_PATH = "ml/artifacts/model_metrics.json"
+    MODEL_PATH = str(_PROJECT_ROOT / "ml" / "artifacts" / "credit_model_v1.joblib")
+    METRICS_PATH = str(_PROJECT_ROOT / "ml" / "artifacts" / "model_metrics.json")
 
     @classmethod
     def get_model(cls):

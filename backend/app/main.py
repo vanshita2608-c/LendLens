@@ -1,3 +1,14 @@
+import sys
+from pathlib import Path
+
+# Add project root and backend to sys.path so that 'ml', 'data', and 'app' resolve seamlessly
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+_BACKEND_DIR = _PROJECT_ROOT / "backend"
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings

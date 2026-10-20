@@ -1,14 +1,19 @@
 import os
 import json
+from pathlib import Path
 import joblib
 import pytest
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+MODEL_PATH = str(_PROJECT_ROOT / "ml" / "artifacts" / "credit_model_v1.joblib")
+METRICS_PATH = str(_PROJECT_ROOT / "ml" / "artifacts" / "model_metrics.json")
+
 def test_model_artifact_and_metrics_files_exist():
-    assert os.path.exists("ml/artifacts/credit_model_v1.joblib"), "Model artifact joblib not found"
-    assert os.path.exists("ml/artifacts/model_metrics.json"), "Model metrics JSON not found"
+    assert os.path.exists(MODEL_PATH), "Model artifact joblib not found"
+    assert os.path.exists(METRICS_PATH), "Model metrics JSON not found"
 
 def test_model_artifact_loading_and_prediction():
-    model = joblib.load("ml/artifacts/credit_model_v1.joblib")
+    model = joblib.load(MODEL_PATH)
     assert model is not None
     assert hasattr(model, "predict_proba")
 
@@ -31,7 +36,7 @@ def test_model_artifact_loading_and_prediction():
     assert 0.0 <= pd <= 1.0
 
 def test_model_metrics_contents():
-    with open("ml/artifacts/model_metrics.json", "r") as f:
+    with open(METRICS_PATH, "r") as f:
         metrics = json.load(f)
 
     assert metrics["version"] == "v1.0.0-rf"

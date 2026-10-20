@@ -1,6 +1,15 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_ROOT_DB = _PROJECT_ROOT / "lendlens.db"
+_RAW_DB_URL = os.getenv("DATABASE_URL", "")
+if not _RAW_DB_URL or _RAW_DB_URL in ["sqlite:///./lendlens.db", "sqlite:///lendlens.db"]:
+    _DEFAULT_DB = f"sqlite:///{_ROOT_DB}"
+else:
+    _DEFAULT_DB = _RAW_DB_URL
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LendLens API"
@@ -8,10 +17,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     
     # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "sqlite:///./lendlens.db"
-    )
+    DATABASE_URL: str = _DEFAULT_DB
     
     # CORS
     CORS_ORIGINS: List[str] = [
