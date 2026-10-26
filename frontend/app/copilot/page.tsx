@@ -14,7 +14,10 @@ import {
   HelpCircle,
   FlaskConical,
   Compass,
-  Layers
+  Layers,
+  Copy,
+  Check,
+  RotateCcw
 } from 'lucide-react';
 import Link from 'next/link';
 import { queryCopilot, getExperimentSuggestions } from '@/lib/api';
@@ -47,6 +50,24 @@ export default function CopilotPage() {
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleClear = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        sender: 'copilot',
+        text: "Hello! I am the LendLens Product Intelligence Copilot. I can analyze application funnels, evaluate customer acquisition costs, explain credit risk models, and generate product experiment proposals based on real data.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputText).trim();
@@ -97,9 +118,9 @@ export default function CopilotPage() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6 flex flex-col h-[calc(100vh-2rem)]">
+    <div className="max-w-5xl mx-auto space-y-4 flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="pb-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="pb-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -118,22 +139,33 @@ export default function CopilotPage() {
           </p>
         </div>
 
-        <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-600 border border-slate-200 flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-indigo-600" />
-          <span>Zero Hallucination / No Arbitrary SQL</span>
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-600 border border-slate-200 flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Zero Hallucination / No Arbitrary SQL</span>
+          </div>
+
+          <button
+            onClick={handleClear}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 text-xs flex items-center gap-1"
+            title="Reset conversation"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Reset</span>
+          </button>
         </div>
       </div>
 
       {/* Suggested Query Chips */}
-      <div className="space-y-1.5">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Example Inquiries:</span>
+      <div className="space-y-1 shrink-0">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Example Inquiries:</span>
         <div className="flex flex-wrap gap-2">
           {QUERY_TEMPLATES.map((tmpl, idx) => (
             <button
               key={idx}
               onClick={() => handleSendMessage(tmpl)}
               disabled={loading}
-              className="text-xs py-1.5 px-3 bg-white hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 border border-slate-200 rounded-lg text-slate-700 font-medium transition-all text-left shadow-sm flex items-center gap-1.5"
+              className="text-xs py-1 px-2.5 bg-white hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 border border-slate-200 rounded-lg text-slate-700 font-medium transition-all text-left shadow-sm flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <span>{tmpl}</span>
@@ -143,7 +175,7 @@ export default function CopilotPage() {
       </div>
 
       {/* Conversation Thread */}
-      <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto space-y-6">
+      <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto space-y-6 min-h-0">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -166,11 +198,30 @@ export default function CopilotPage() {
               {/* Structured AI Response Card */}
               {msg.response && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 text-sm">
-                  {/* Direct Answer */}
-                  <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100">
-                    <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider block mb-1">
-                      Direct Executive Answer:
-                    </span>
+                  {/* Direct Answer Header with Copy button */}
+                  <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 relative">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                        Direct Executive Answer:
+                      </span>
+                      <button
+                        onClick={() => handleCopy(msg.id, `${msg.response.direct_answer}\n\nInterpretation:\n${msg.response.apm_interpretation || ''}`)}
+                        className="text-slate-400 hover:text-indigo-600 p-1 rounded transition-colors flex items-center gap-1 text-[11px]"
+                        title="Copy answer"
+                      >
+                        {copiedId === msg.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-600 font-medium">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-slate-900 font-medium leading-relaxed">
                       {msg.response.direct_answer}
                     </p>

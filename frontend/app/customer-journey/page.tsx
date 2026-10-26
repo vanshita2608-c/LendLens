@@ -233,15 +233,34 @@ export default function CustomerJourneyPage() {
           </div>
 
           {/* Product Opportunity Proposal */}
-          <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-1">
-              <Lightbulb className="w-4 h-4 text-blue-600" />
-              Proposed Product Hypothesis & Action
+          <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-4 space-y-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-1">
+                <Lightbulb className="w-4 h-4 text-blue-600" />
+                Proposed Product Hypothesis & Action
+              </div>
+              <p className="text-xs text-blue-800 leading-relaxed">
+                Target intervention: Deploy instant pre-fill and optimize verification latency for this stage.
+                Projected to recover up to 15% of drop-off applicants without degrading credit quality.
+              </p>
             </div>
-            <p className="text-xs text-blue-800 leading-relaxed">
-              Target intervention: Deploy instant pre-fill and optimize verification latency.
-              Projected to recover up to 15% of drop-off applicants without degrading credit quality.
-            </p>
+
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <Link
+                href={`/strategy-lab?stage=${selectedStage}`}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Simulate in Strategy Lab</span>
+              </Link>
+              <Link
+                href="/experiments"
+                className="px-3 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <span>Track in Experiments</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
         </div>
 

@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Bell, HelpCircle } from 'lucide-react';
+import ApmGuideModal from '@/components/ui/ApmGuideModal';
+import NotificationDropdown from '@/components/ui/NotificationDropdown';
 
 const TITLE_MAP: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': {
@@ -41,6 +43,10 @@ const TITLE_MAP: Record<string, { title: string; subtitle: string }> = {
 
 export default function Header() {
   const pathname = usePathname();
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [notifsOpen, setNotifsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
+
   const current = TITLE_MAP[pathname] || {
     title: 'Digital Lending Platform',
     subtitle: 'Turning lending data into smarter product decisions.'
@@ -57,27 +63,62 @@ export default function Header() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative">
         <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>PostgreSQL / SQLite Production Mirror</span>
         </div>
 
+        {/* APM Playbook & Documentation Modal Trigger */}
         <button 
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          title="Product Guide & Documentation"
+          onClick={() => {
+            setGuideOpen(true);
+            setNotifsOpen(false);
+          }}
+          className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium ${
+            guideOpen 
+              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+          }`}
+          title="Product Guide & APM Playbook"
+          aria-label="Open APM Playbook"
         >
-          <HelpCircle className="w-4 h-4" />
+          <HelpCircle className="w-4 h-4 text-indigo-600" />
+          <span className="hidden sm:inline">Playbook</span>
         </button>
 
-        <button 
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors relative"
-          title="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="w-2 h-2 bg-blue-600 rounded-full absolute top-1.5 right-1.5" />
-        </button>
+        {/* Notification Center Trigger */}
+        <div className="relative">
+          <button 
+            onClick={() => setNotifsOpen(!notifsOpen)}
+            className={`p-2 rounded-lg transition-colors relative ${
+              notifsOpen 
+                ? 'bg-indigo-50 text-indigo-700' 
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+            }`}
+            title="Portfolio & Risk Notifications"
+            aria-label="Toggle notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="w-2 h-2 bg-indigo-600 rounded-full absolute top-1.5 right-1.5 animate-pulse" />
+            )}
+          </button>
+
+          {/* Notification Dropdown Component */}
+          <NotificationDropdown
+            isOpen={notifsOpen}
+            onClose={() => setNotifsOpen(false)}
+            onUnreadCountChange={setUnreadCount}
+          />
+        </div>
       </div>
+
+      {/* APM Guide Modal Component */}
+      <ApmGuideModal
+        isOpen={guideOpen}
+        onClose={() => setGuideOpen(false)}
+      />
     </header>
   );
 }

@@ -101,9 +101,30 @@ export default function StrategyLabPage() {
     'Direct Mail': 5.0
   });
 
-  // Load saved scenarios on mount
+  // Load saved scenarios on mount & parse query parameters
   useEffect(() => {
     loadSavedScenarios();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const stageParam = params.get('stage');
+      if (stageParam) {
+        const stageMap: Record<string, string> = {
+          'KYC_COMPLETED': 'KYC Completed',
+          'DETAILS_SUBMITTED': 'Details Submitted',
+          'CREDIT_ASSESSED': 'Credit Assessed',
+          'LOAN_APPROVED': 'Loan Approved',
+          'OFFER_ACCEPTED': 'Offer Accepted'
+        };
+        if (stageMap[stageParam]) {
+          setFunnelStage(stageMap[stageParam]);
+          setSelectedCategory('funnel_improvement');
+        }
+      }
+      const viewParam = params.get('view');
+      if (viewParam === 'comparison') {
+        setActiveView('comparison');
+      }
+    }
   }, []);
 
   const loadSavedScenarios = async () => {
@@ -113,6 +134,22 @@ export default function StrategyLabPage() {
     } catch (err: any) {
       console.error('Failed to load saved scenarios:', err);
     }
+  };
+
+  const handleDownloadBrief = () => {
+    if (!activeBrief) return;
+    const blob = new Blob([activeBrief.markdown_content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeName = (activeBrief.scenario_name || 'decision_brief')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_');
+    link.setAttribute('download', `${safeName}_brief.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Run simulation whenever category or primary parameters change
@@ -889,16 +926,27 @@ export default function StrategyLabPage() {
 
               <div className="flex items-center gap-2">
                 {activeBrief && (
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(activeBrief.markdown_content);
-                      alert('Brief copied to clipboard in Markdown format!');
-                    }}
-                    className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                    <span>Copy Markdown</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={handleDownloadBrief}
+                      className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title="Download Decision Brief as Markdown"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download .md</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeBrief.markdown_content);
+                        alert('Brief copied to clipboard in Markdown format!');
+                      }}
+                      className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      title="Copy Markdown to Clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>Copy</span>
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => setBriefModalOpen(false)}

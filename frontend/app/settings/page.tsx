@@ -36,7 +36,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
       <div className="pb-4 border-b border-slate-200">
         <div className="flex items-center gap-2">

@@ -79,7 +79,7 @@ export default function PortfolioPage() {
                              (delinquencyBuckets.par90_default?.pct || 0));
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
